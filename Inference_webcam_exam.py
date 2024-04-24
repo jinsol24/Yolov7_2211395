@@ -15,44 +15,32 @@ from PIL import Image
 from pathlib import Path
 from collections import OrderedDict,namedtuple
 
-providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if cuda else ['CPUExecutionProvider'] #['AzureExecutionProvider', 'CPUExecutionProvider'] if cuda else ['CPUExecutionProvider']
+providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if cuda else ['CPUExecutionProvider']
 session = ort.InferenceSession(w, providers=providers)
 
-tf.compat.disable_v2_behavior()
-with tf.compat.Session() as sess:
-    x = tf.compat.placeholder(tf.float32, [2])
-    x2 = tf.square(x)
-    print(sess.run(x2, feed_dict={x: [2, 3]}))
-    # [4. 9.]
-
-#print("00000")
-
 def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleup=True, stride=32):
-    # Resize and pad image while meeting stride-multiple constraints
-    shape = im.shape[:2]  # current shape [height, width]
+    shape = im.shape[:2]  
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)
 
-    # Scale ratio (new / old)
     r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-    if not scaleup:  # only scale down, do not scale up (for better val mAP)
+    if not scaleup:  
         r = min(r, 1.0)
 
-    # Compute padding
     new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
-    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
+    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  
 
-    if auto:  # minimum rectangle
-        dw, dh = np.mod(dw, stride), np.mod(dh, stride)  # wh padding
+    if auto:  
+        dw, dh = np.mod(dw, stride), np.mod(dh, stride)  
 
-    dw /= 2  # divide padding into 2 sides
+    dw /= 2  
     dh /= 2
 
-    if shape[::-1] != new_unpad:  # resize
+    if shape[::-1] != new_unpad:  
         im = cv2.resize(im, new_unpad, interpolation=cv2.INTER_LINEAR)
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
+    im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  
     return im, r, (dw, dh)
 
 names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 
@@ -82,32 +70,22 @@ while webcam.isOpened():
     img = cv2.resize(img, (1280, 720))
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    #cv2.imshow("original",img)
     
-
     image = img.copy()
     image, ratio, dwdh = letterbox(image, auto=False)
     image = image.transpose((2, 0, 1))
     image = np.expand_dims(image, 0)
     image = np.ascontiguousarray(image)
 
-    #print("11111")
-
     im = image.astype(np.float32)
     im /= 255
-    im.shape
 
     outname = [i.name for i in session.get_outputs()]
-    outname
-
     inname = [i.name for i in session.get_inputs()]
-   # inname
 
     inp = {inname[0]:im}
 
-    # ONNX inference
     outputs = session.run(outname, inp)[0]
-    #outputs
 
     ori_images = [img.copy()]
 
@@ -125,7 +103,7 @@ while webcam.isOpened():
         cv2.rectangle(image,box[:2],box[2:],color,2)
         cv2.putText(image,name,(box[0], box[1] - 2),cv2.FONT_HERSHEY_SIMPLEX,0.75,[225, 255, 255],thickness=2)  
 
-    print('[INFO] draw all detected boxes by Prof. Kim....!')    #<===== 여기에 여러분들의 학번이 표시되도록 합니다.
+    print('[INFO] draw all detected boxes by 2211395')    #<===== 여기에 여러분들의 학번이 표시되도록 합니다.
 
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR) # PIL image --> opencv image Mat buffer
     
